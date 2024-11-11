@@ -1,0 +1,9 @@
+pyproject.toml
+setup.cfg
+napari_microtubules/__init__.py
+napari_microtubules.egg-info/PKG-INFO
+napari_microtubules.egg-info/SOURCES.txt
+napari_microtubules.egg-info/dependency_links.txt
+napari_microtubules.egg-info/entry_points.txt
+napari_microtubules.egg-info/requires.txt
+napari_microtubules.egg-info/top_level.txt
