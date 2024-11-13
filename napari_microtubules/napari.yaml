@@ -1,10 +1,10 @@
 name: napari-microtubules
 contributions:
   commands:
-    - id: napari-microtubules.say_hi
-      title: Say hello, world!
-      python_name: napari_microtubules:show_hello_message
+    - id: napari-microtubules.run_microtubules
+      title: View Microtobule Video Frames
+      python_name: napari_microtubules:run
   widgets:
-    - command: napari-microtubules.say_hi  # note, same as command.id above
+    - command: napari-microtubules.run_microtubules  # note, same as command.id above
       display_name: Microtubules Segmentation
       autogenerate: true
