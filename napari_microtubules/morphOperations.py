@@ -3,25 +3,25 @@ import numpy as np
 
 
 def crop_image(image, x1, x2, y1, y2):
-    """Crop image based on input size."""
+    """ crop image based on input size """
     mask = np.zeros(image.shape)
     mask[x1:x2, y1:y2] = 1
     return mask * image
 
 
 def do_binary_thresholding(image, threshold_value):
-    """Apply binary thresholding to the image."""
+    """ apply binary thresholding on input image """
     _, binary_image = cv.threshold(image, threshold_value, image.max(), cv.THRESH_BINARY)
     return binary_image
 
 
 def do_adaptive_thresholding(image):
-    """Apply adaptive thresholding to the image."""
+    """ apply adaptive thresholding on input image """
     return cv.adaptiveThreshold(image, image.max(), cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
 
 
 def denoise_image(image):
-    """Denoise the image and enhance contrast."""
+    """ denoise input image and boost constrast """
     blurred_image = cv.medianBlur(image.astype(np.uint8), 5)
     contrast_enhancer = cv.createCLAHE(clipLimit=None, tileGridSize=(8, 8))
     enhanced_image = contrast_enhancer.apply(blurred_image)
@@ -31,7 +31,7 @@ def denoise_image(image):
 
 
 def shift(arr, num, fill_value=np.nan):
-    """Shift elements of an array by a specified number of positions."""
+    """ shift elements of input array by some input positions """
     result = np.empty_like(arr)
     if num > 0:
         result[:num] = fill_value
@@ -45,7 +45,7 @@ def shift(arr, num, fill_value=np.nan):
 
 
 def create_kernel(k, d):
-    """Create a custom kernel based on the size k and parameter d."""
+    """ make a custom kernel """
     kernel = np.zeros((k, k), np.uint8)
     if -1 < d < 1:
         offset = round((k - d * k + 1) / 2)
@@ -66,7 +66,7 @@ def create_kernel(k, d):
 
 
 def adjust_kernel(kernel, k, d):
-    """Adjust the kernel to ensure proper boundary alignment."""
+    """ adjust kernel to make sure the boundary is aligned right """
     if -1 < d < 1:
         up, down = np.argmax(kernel[:, 0] == 1), np.argmax(kernel[::-1, -1] == 1)
         if up - down > 1:
@@ -83,26 +83,26 @@ def adjust_kernel(kernel, k, d):
 
 
 def closing(img_bin, k, d):
-    """Perform closing morphological operation on binary image."""
+    """ do morphological closing on binary input image using the kernel """
     kernel = create_kernel(k, d)
     kernel = adjust_kernel(kernel, k, d)
     return cv.morphologyEx(img_bin, cv.MORPH_CLOSE, kernel)
 
 
 def opening(img_bin, k, d):
-    """Perform opening morphological operation on binary image."""
+    """ do morphological opening on binary input image using the kernel """
     kernel = create_kernel(k, d)
     kernel = adjust_kernel(kernel, k, d)
     return cv.morphologyEx(img_bin, cv.MORPH_OPEN, kernel)
 
 
-def normal_closing(img_bin, k):
-    """Perform normal closing on binary image."""
-    kernel = np.ones((k, k), np.uint8)
-    return cv.morphologyEx(img_bin, cv.MORPH_CLOSE, kernel)
-
-
 def normal_opening(img_bin, k):
-    """Perform normal opening on binary image."""
+    """ do normal opening on binary image (not using the kernel adjustment method like above) """
     kernel = np.ones((k, k), np.uint8)
     return cv.morphologyEx(img_bin, cv.MORPH_OPEN, kernel)
+
+
+def normal_closing(img_bin, k):
+    """ do normal closing on binary image (not using the kernel adjustment method like above) """
+    kernel = np.ones((k, k), np.uint8)
+    return cv.morphologyEx(img_bin, cv.MORPH_CLOSE, kernel)
