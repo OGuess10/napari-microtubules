@@ -25,7 +25,7 @@ def detectLine(img, line, k, threshold):
     pix2 = [round(line[1][1]), round(line[1][2])]
 
     # 1. blur and adjust global contrast
-    img2, img = denoiseImage(img)
+    img2, img = denoise_image(img)
 
     # 2. find threshold value to get binary image
     temp11 = max(min(pix1[0], pix2[0]) - 5, 0)
@@ -43,14 +43,14 @@ def detectLine(img, line, k, threshold):
     thres = total / count_nonzero * threshold
     
     # 2a. do thresholding
-    bin_img = doAdaptiveThresholding(img)
-    img2 = doBinaryThresholding(img2, thres - 5)
+    bin_img = do_adaptive_thresholding(img)
+    img2 = do_binary_thresholding(img2, thres - 5)
     img2 = img2.astype(np.uint8)
     img2 = normal_opening(img2, 2)
 
     bin_img = bin_img * (img2 / 255)
 
-    bin_img = cropImage(bin_img, max(temp11 - 100, 0), min(temp12 + 100, bin_img.shape[0]),
+    bin_img = crop_image(bin_img, max(temp11 - 100, 0), min(temp12 + 100, bin_img.shape[0]),
                        max(temp21 - 100, 0), min(temp22 + 100, bin_img.shape[1]))
 
     bin_img = normal_opening(bin_img, 2)
