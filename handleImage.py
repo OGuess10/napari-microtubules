@@ -98,7 +98,7 @@ def detectLine(img, line, k, threshold):
     bin_img = normal_closing(bin_img, 2)
 
     # 5. get all lines
-    ret = select_line(bin_img, pix1, pix2)
+    ret = select_best_line(bin_img, pix1, pix2)
     if ret is None:
         return
     [[y1, x1, y2, x2]], derivative, hglines, hgline = ret

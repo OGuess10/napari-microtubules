@@ -12,7 +12,7 @@ from handleImage import LoadTIFF
 
 def showNotification(message: str, severity=NotificationSeverity.WARNING):
     """ show Napari notification """
-    notification = Notification(message, severity, actions=[("OK", lambda x: None)])
+    notification = Notification(message, severity, actions=[("OK ", lambda x: None)])
     NapariQtNotification.show_notification(notification)
 
 
@@ -40,7 +40,7 @@ def displaySegmentationResults(viewer, processed_video, segment_lengths):
             blending="additive",
         )
 
-    # Plot microtubule length over time
+    # plot microtubule length over time
     plt.plot(range(len(segment_lengths)), segment_lengths, color="r")
     plt.title("length of microtubule over time")
     plt.xlabel("frame in video")
