@@ -4,4 +4,3 @@ napari[all]
 numpy
 opencv_python
 Pillow
-Shapely
