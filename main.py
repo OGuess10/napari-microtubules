@@ -1,58 +1,47 @@
 from magicgui import magicgui
 import matplotlib.pyplot as plt
 import numpy as np
-import typing
-
 import napari
 from napari._qt.dialogs.qt_notification import NapariQtNotification
 from napari.utils.notifications import Notification, NotificationSeverity
+import typing
 
 import handleImage
 from handleImage import LoadTIFF
 
 
-def notifyUser(message: str, severity=NotificationSeverity.WARNING):
+def showNotification(message: str, severity=NotificationSeverity.WARNING):
     """ show Napari notification """
-    notif = Notification(
-        message,
-        severity,
-        actions=[("OK", lambda x: None)],
-    )
-    NapariQtNotification.show_notification(notif)
+    notification = Notification(message, severity, actions=[("OK", lambda x: None)])
+    NapariQtNotification.show_notification(notification)
 
 
-def preprocessVideo(image_layer):
+def prepareVideoData(image_layer):
     """ prep video data for processing """
-    video = np.array(image_layer.data, dtype=np.uint16)
-    return video
+    return np.array(image_layer.data, dtype=np.uint16)
 
 
-def processSingleFrame(img, line, struct_size, thres_ratio):
-    """ process one frame using user-chosen line """
-    result = handleImage.detectLine(img, line, struct_size, thres_ratio)
+def processFrame(image, line_coordinates, structuring_element_size, threshold_ratio):
+    """ process a single frame using the user-chosen line """
+    result = handleImage.detectLine(image, line_coordinates, structuring_element_size, threshold_ratio)
     if result is None:
-        notif = Notification(
-                f'no detected microtubule at frame. draw a line at more frames.',
-                NotificationSeverity.WARNING,
-                actions=[('OK', lambda x: None)],
-            )
-        NapariQtNotification.show_notification(notif)
-        return
+        showNotification('cannot detect microtubule at this frame', NotificationSeverity.WARNING)
+        return None
     return result
 
 
-def visualizeSegmentation(viewer, video, lengths):
-    """ add segmented overlay and plots lengths """
+def displaySegmentationResults(viewer, processed_video, segment_lengths):
+    """ add segmented overlay and plot lengths """
     if viewer:
         viewer.add_image(
-            video,
+            processed_video,
             name="segmented microtubule",
             colormap="red",
             blending="additive",
         )
 
-    # plot microtubule length over time
-    plt.plot(range(len(lengths)), lengths, color="r")
+    # Plot microtubule length over time
+    plt.plot(range(len(segment_lengths)), segment_lengths, color="r")
     plt.title("length of microtubule over time")
     plt.xlabel("frame in video")
     plt.ylabel("length")
@@ -60,63 +49,65 @@ def visualizeSegmentation(viewer, video, lengths):
     plt.show()
 
 
-@magicgui(call_button="run")
-def main(
-        draw_layer: 'napari.layers.Shapes',
+@magicgui(call_button="run segmentation")
+def processMicrotubuleData(
+        shape_layer: 'napari.layers.Shapes',
         image_layer: 'napari.layers.Image',
-        struct_size=7,
-        start_frame=0,
-        end_frame=71,
-        thres_ratio=1.0,
+        video_start=0,
+        video_end=71,
+        structure=7,
+        threshold=1.0,
         viewer: napari.Viewer = None
 ) -> typing.List[napari.types.LayerDataTuple]:
-    frame2line = {}
-    if draw_layer is not None:
-        lines = draw_layer.data
-        for line in lines:
-            frame2line[line[0][0]] = line
     
-    video = preprocessVideo(image_layer)
-    length = []
-    tiff_loader = LoadTIFF(video)
+    frame_to_line_coordinates = {}
+    if shape_layer is not None:
+        drawn_lines = shape_layer.data
+        for line in drawn_lines:
+            frame_to_line_coordinates[line[0][0]] = line
+    
+    video_data = prepareVideoData(image_layer)
+    segment_lengths = []
+    tiff_loader = LoadTIFF(video_data)
 
-    if start_frame not in frame2line:
-        notifyUser('draw a line to pick a microtubule', NotificationSeverity.WARNING)
-        return
+    if video_start not in frame_to_line_coordinates:
+        showNotification('draw a line to pick a microtubule', NotificationSeverity.WARNING)
+        return []
     
     # process each frame
-    for i in range(start_frame, min(end_frame, len(video))):
-        img = tiff_loader.tiff_gray_image[i]
-        if i in frame2line:
-            line = frame2line[i]
+    for frame_index in range(video_start, min(video_end, len(video_data))):
+        image_frame = tiff_loader.tiff_gray_image[frame_index]
+        if frame_index in frame_to_line_coordinates:
+            line_coordinates = frame_to_line_coordinates[frame_index]
 
-        ret = processSingleFrame(img, line, struct_size, thres_ratio)
+        process_result = processFrame(image_frame, line_coordinates, structure, threshold)
         
-        end_points, thres_img, l = ret
-        line = [[i, end_points[0][0], end_points[0][1]], [i, end_points[1][0], end_points[1][1]]]
+        if process_result:
+            endpoints, threshold_image, segment_length = process_result
+            line_coordinates = [[frame_index, endpoints[0][0], endpoints[0][1]], [frame_index, endpoints[1][0], endpoints[1][1]]]
 
-        scaled_img = np.clip(thres_img.astype(np.uint32) * 257, 0, 65535).astype(np.uint16)
-        video[i] = scaled_img
-        length.append(l)
+            scaled_image = np.clip(threshold_image.astype(np.uint32) * 257, 0, 65535).astype(np.uint16)
+            video_data[frame_index] = scaled_image
+            segment_lengths.append(segment_length)
 
-    visualizeSegmentation(viewer, video, length)
-    metadata = {"name": "segment", "colormap": "red", "blending": "additive"}
-    return [(video, metadata, "image")]
+    displaySegmentationResults(viewer, video_data, segment_lengths)
+    metadata = {"name": "segmented microtubule", "colormap": "red", "blending": "additive"}
+    return [(video_data, metadata, "image")]
 
 
-@magicgui(call_button="save to local")
-def saveImageLocally(image_layer: "napari.layers.Image"):
+@magicgui(call_button="save")
+def saveProcessedImageLocally(image_layer: "napari.layers.Image"):
     """ save segmented image to local file """
     image_layer.save("segmentation.tif", plugin="builtins")
 
 
-def initializeNapari():
-    """ initialize Napari and widgets """
+def initializeNapariUI():
+    """ initialize viewer and widgets """
     viewer = napari.Viewer()
-    viewer.window.add_dock_widget(main)
-    viewer.window.add_dock_widget(saveImageLocally)
+    viewer.window.add_dock_widget(processMicrotubuleData)
+    viewer.window.add_dock_widget(saveProcessedImageLocally)
     napari.run()
 
 
 if __name__ == "__main__":
-    initializeNapari()
+    initializeNapariUI()

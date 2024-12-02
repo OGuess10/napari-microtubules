@@ -25,7 +25,7 @@ def detectLine(img, line, k, threshold):
     pix2 = [round(line[1][1]), round(line[1][2])]
 
     # 1. blur and adjust global contrast
-    img2, img = denoise(img)
+    img2, img = denoiseImage(img)
 
     # 2. find threshold value to get binary image
     temp11 = max(min(pix1[0], pix2[0]) - 5, 0)

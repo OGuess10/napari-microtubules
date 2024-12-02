@@ -20,18 +20,18 @@ def doAdaptiveThresholding(image):
     return cv.adaptiveThreshold(image, image.max(), cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
 
 
-def denoise(image):
-    """ denoise and make contrast better """
+def denoiseImage(image):
+    """ denoise image and make contrast better """
     image = np.array(image.astype(np.uint8))
-    blurred = cv.medianBlur(image, 5)
-    im = np.array(blurred.astype(np.uint8))
-    clahe = cv.createCLAHE(clipLimit=None, tileGridSize=(8, 8))
-    im = clahe.apply(im)
+    blurred_image = cv.medianBlur(image, 5)
+    denoised_image = np.array(blurred_image.astype(np.uint8))
+    contrast_enhancer = cv.createCLAHE(clipLimit=None, tileGridSize=(8, 8))
+    enhanced_image = contrast_enhancer.apply(denoised_image)
 
-    im2 = np.array(image.astype(np.uint8))
-    clahe = cv.createCLAHE(clipLimit=None, tileGridSize=(8, 8))
-    im2 = clahe.apply(im2)
-    return im, im2
+    original_image = np.array(image.astype(np.uint8))
+    contrast_enhancer = cv.createCLAHE(clipLimit=None, tileGridSize=(8, 8))
+    enhanced_original_image = contrast_enhancer.apply(original_image)
+    return enhanced_image, enhanced_original_image
 
 
 def shift(arr, num, fill_value=np.nan):
