@@ -25,10 +25,10 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
 ## to run on your machine:
 - install the most recent version of python
 - initialize a virtual environment and install dependencies:
-    - navigate to the ./microtubules directory
+    - navigate to the project directory
     - run `python3 -m venv venv`
     - activate the virtual environment:
         - for macOS & linux terminal: `. venv/bin/activate`
         - for windows powershell: `.\venv\Scripts\activate`
-    - install the dependencies: `pip install -r requirements.txt`
+    - install the dependencies manually, or run `pip install -r requirements.txt`
 - run main.py: `python main.py`
