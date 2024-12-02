@@ -31,4 +31,4 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
         - for macOS & linux: `. venv/bin/activate`
         - for windows: `.\venv\Scripts\activate`
     - install dependencies manually, or run `pip install -r dependencies.txt`
-- run main.py: `python main.py`
+- run main.py: `python3 main.py`
