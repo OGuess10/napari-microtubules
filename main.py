@@ -6,8 +6,8 @@ from napari._qt.dialogs.qt_notification import NapariQtNotification
 from napari.utils.notifications import Notification, NotificationSeverity
 import typing
 
-import handleImage
-from handleImage import LoadTIFF
+import napari_microtubules.handleImage as handleImage
+from napari_microtubules.handleImage import LoadTIFF
 
 
 def showNotification(message: str, severity=NotificationSeverity.WARNING):

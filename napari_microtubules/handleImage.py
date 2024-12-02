@@ -1,6 +1,6 @@
 import numpy as np
-from morphOperations import *
-from handleTubuleSelection import *
+from napari_microtubules.morphOperations import *
+from napari_microtubules.handleTubuleSelection import *
 
 
 class LoadTIFF:

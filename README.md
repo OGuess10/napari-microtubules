@@ -22,7 +22,7 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
    - algorithm effectively speeds up process of manual segmentation
 
 
-## to run on your machine:
+## to setup on your machine:
 - install the most recent version of python
 - initialize a virtual environment and install dependencies:
     - navigate to the project directory
@@ -31,4 +31,11 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
         - for macOS & linux: `. venv/bin/activate`
         - for windows: `.\venv\Scripts\activate`
     - install dependencies manually, or run `pip install -r dependencies.txt`
+
+## to run as python program:
 - run main.py: `python3 main.py`
+
+## to run as napari plugin:
+- run napari
+- select Microtubules Segmentation from the Plugins menu
+- click Run on the right-hand side
