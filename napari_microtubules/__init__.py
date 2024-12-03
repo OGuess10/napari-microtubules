@@ -13,6 +13,8 @@ import typing
 import napari_microtubules.handleImage as handleImage
 from napari_microtubules.handleImage import LoadTIFF
 
+segment_lengths_global = []
+
 def showNotification(message: str, severity=NotificationSeverity.WARNING):
     """ show Napari notification """
     notification = Notification(message, severity, actions=[("OK ", lambda x: None)])
@@ -42,6 +44,9 @@ def displaySegmentationResults(viewer, processed_video, segment_lengths):
             colormap="red",
             blending="additive",
         )
+
+    global segment_lengths_global
+    segment_lengths_global = segment_lengths
 
     # plot microtubule length over time
     plt.plot(range(len(segment_lengths)), segment_lengths, color="r")
@@ -97,6 +102,72 @@ def processMicrotubuleData(
     metadata = {"name": "segmented microtubule", "colormap": "red", "blending": "additive"}
     return [(video_data, metadata, "image")]
 
+@magicgui(call_button="reselect microtubule")
+def reselectMicrotubule(
+    shape_layer: 'napari.layers.Shapes',
+    image_layer: 'napari.layers.Image',
+    replace_frames_start=0,
+    replace_frames_end=71,
+    structure=7,
+    threshold=1.0,
+    viewer: napari.Viewer = None
+) -> typing.List[napari.types.LayerDataTuple]:
+    
+    # Step 1: Reset previous selection of the microtubule (clear coordinates)
+    frame_to_line_coordinates = {}
+    
+    # Step 2: Ensure that shape_layer exists and has data to work with
+    if shape_layer is not None:
+        drawn_lines = shape_layer.data  # Get the drawn lines from the shape layer
+        for line in drawn_lines:
+            # Update the frame-to-line coordinates map with new lines
+            frame_to_line_coordinates[line[0][0]] = line
+    
+    # Step 3: Prepare video data from image layer
+    video_data = prepareVideoData(image_layer)
+    segment_lengths = []
+    tiff_loader = LoadTIFF(video_data)
+
+    # Step 4: Process each frame using the new line coordinates
+    for frame_index in range(replace_frames_start, min(replace_frames_end, len(video_data))):
+        image_frame = tiff_loader.tiff_gray_image[frame_index]
+        
+        # Check if a line exists for the current frame
+        if frame_index in frame_to_line_coordinates:
+            line_coordinates = frame_to_line_coordinates[frame_index]
+
+        # Process the frame with the new line coordinates
+        process_result = processFrame(image_frame, line_coordinates, structure, threshold)
+        
+        if process_result:
+            endpoints, threshold_image, segment_length = process_result
+            line_coordinates = [[frame_index, endpoints[0][0], endpoints[0][1]], 
+                                [frame_index, endpoints[1][0], endpoints[1][1]]]
+
+            # Update video data with processed image
+            scaled_image = np.clip(threshold_image.astype(np.uint32) * 257, 0, 65535).astype(np.uint16)
+            video_data[frame_index] = scaled_image
+            segment_lengths.append(segment_length)
+
+    global segment_lengths_global
+    new_segment_lengths = segment_lengths_global
+
+    # redo segmented microtubule images
+    layer_name = "segmented microtubule"
+    if layer_name in viewer.layers:
+        layer = viewer.layers[layer_name]
+        layer_data = np.array(layer.data)
+
+        for frame_index in range(replace_frames_start, min(replace_frames_end, len(video_data))):
+            if 0 <= frame_index < len(layer_data):
+                layer_data[frame_index] = video_data[frame_index]
+            if frame_index < len(new_segment_lengths):
+                new_segment_lengths[frame_index] = segment_lengths[frame_index-replace_frames_start]
+
+    displaySegmentationResults(viewer, layer_data, new_segment_lengths)
+    metadata = {"name": "segmented microtubule", "colormap": "red", "blending": "additive"}
+    return [(video_data, metadata, "image")]
+
 
 @magicgui(call_button="save")
 def saveProcessedImageLocally(image_layer: "napari.layers.Image"):
@@ -106,4 +177,5 @@ def saveProcessedImageLocally(image_layer: "napari.layers.Image"):
 def run():
     viewer = napari.Viewer()
     viewer.window.add_dock_widget(processMicrotubuleData)
+    viewer.window.add_dock_widget(reselectMicrotubule)
     viewer.window.add_dock_widget(saveProcessedImageLocally)
