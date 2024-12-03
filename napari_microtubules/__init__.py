@@ -12,8 +12,30 @@ from napari.utils.notifications import Notification, NotificationSeverity
 import typing
 import napari_microtubules.handleImage as handleImage
 from napari_microtubules.handleImage import LoadTIFF
+from qtpy.QtWidgets import QMessageBox
 
 segment_lengths_global = []
+
+def showTutorial(viewer):
+    msg = QMessageBox(viewer.window.qt_viewer)
+    msg.setIcon(QMessageBox.Information)
+    msg.setText("How to use Napari Microtubule Segmentation Plugin:")
+    msg.setInformativeText(
+        "Step 1: Load your data. This should be in TIFF format.\n\n"
+        "Step 2: Move the slider to start on frame 0. Then add a new Shape layer and draw a line over the microtubule "
+        "you would like to segment.\n\n"
+        "Step 3: Ensure that the line and video layer are currently selected in the 'run segmentation' tab. "
+        "Adjust the frame start and frame end numbers to match the length of the video.\n\n"
+        "Step 4: Run the segmentation\n\n"
+        "Step 5: If the tracking gets off, scroll to the frame you want to adjust. Then add a new shape layer "
+        "and redraw a line that overlaps the microtubule. Make sure this new shape layer is selected in the "
+        "'reselect microtubule' tab. Then rerun, and a new 'segmented microtubule' layer should appear with the changes.\n\n"
+        "Step 5: If you would like to save the segmentation, select the segmentation layer and click the save "
+        "button on the save tab.\n\n"
+        "See documentation for further help: https://github.com/OGuess10/napari-microtubules"
+    )
+    msg.setWindowTitle("How to Use")
+    msg.exec_()
 
 def showNotification(message: str, severity=NotificationSeverity.WARNING):
     """ show Napari notification """
@@ -176,6 +198,7 @@ def saveProcessedImageLocally(image_layer: "napari.layers.Image"):
 
 def run():
     viewer = napari.Viewer()
+    showTutorial(viewer)
     viewer.window.add_dock_widget(processMicrotubuleData)
     viewer.window.add_dock_widget(reselectMicrotubule)
     viewer.window.add_dock_widget(saveProcessedImageLocally)
