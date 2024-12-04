@@ -40,7 +40,7 @@ def displaySegmentationResults(viewer, processed_video, segment_lengths):
             blending="additive",
         )
 
-    # plot microtubule length over time
+    # make plot to show microtubule length over time
     plt.plot(range(len(segment_lengths)), segment_lengths, color="r")
     plt.title("length of microtubule over time")
     plt.xlabel("frame in video")

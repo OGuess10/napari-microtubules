@@ -2,13 +2,6 @@ import cv2 as cv
 import numpy as np
 
 
-def crop_image(image, x1, x2, y1, y2):
-    """ crop image based on input size """
-    mask = np.zeros(image.shape)
-    mask[x1:x2, y1:y2] = 1
-    return mask * image
-
-
 def do_binary_thresholding(image, threshold_value):
     """ apply binary thresholding on input image """
     _, binary_image = cv.threshold(image, threshold_value, image.max(), cv.THRESH_BINARY)

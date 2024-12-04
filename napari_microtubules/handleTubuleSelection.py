@@ -87,6 +87,7 @@ def select_best_line(image, pix1, pix2):
 
     return best_line, best_slope, all_lines_image, best_line_image
 
+
 def draw_line(mat, x0, y0, x1, y1, inplace=False):
     """ draw a line on the matrix """
     if not inplace:

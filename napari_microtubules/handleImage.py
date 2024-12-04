@@ -19,6 +19,13 @@ class LoadTIFF:
         self.tiff_gray_image = video // 257
 
 
+def crop_image(image, x1, x2, y1, y2):
+    """ crop image based on input size """
+    mask = np.zeros(image.shape)
+    mask[x1:x2, y1:y2] = 1
+    return mask * image
+
+
 def detectLine(img, line, k, threshold):
     """ track target microtubule based on user line input """
     pix1 = [round(line[0][1]), round(line[0][2])]
