@@ -41,7 +41,7 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold):
     col_max = min(max(point_start[1], point_end[1]) + 5, image.shape[1])
 
     roi = processed_image[row_min:row_max, col_min:col_max]
-    total_intensity = 0
+    total_intensity = np.float64(0)
     valid_pixel_count = 0
 
     for row in range(roi.shape[0]):

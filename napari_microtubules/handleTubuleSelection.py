@@ -161,12 +161,13 @@ def calculate_line_loss(x1, x2, y1, y2, pixel1, pixel2, p1, p2, angle, calculate
         w1 * (np.linalg.norm(p1 - pixel2) ** 2 + np.linalg.norm(p2 - pixel1) ** 2),
     )
     
-    # Length loss: how length of the detected line compares to the expected length
-    length_loss = length / np.hypot(x1 - x2, y1 - y2)
+    # length loss: how length of the detected line compares to expected length
+    line_length = max(np.hypot(x1 - x2, y1 - y2), 1e-6)
+    length_loss = length / line_length
     
     # Rotation loss: how much the angle differs from the expected angle
     rotation_loss = w2 * abs(angle - calculated_angle)
-    
+
     return distance_loss + length_loss + rotation_loss
 
 
@@ -241,9 +242,12 @@ def draw_line(mat, x0, y0, x1, y1, inplace=False):
 
     # Draw line with vectorization
     x = np.arange(x0, x1)
-    y = np.round(((y1 - y0) / (x1 - x0)) * (x - x0) + y0).astype(int)
-    mat[x0, y0], mat[x1, y1] = 2, 2  # Mark start and end points
-    mat[x, y] = 1  # Mark the line pixels
+    if x1 == x0:
+        y = np.full_like(x, y0, dtype=int)
+    else:
+        y = np.round(((y1 - y0) / (x1 - x0)) * (x - x0) + y0).astype(int)
+    mat[x0, y0], mat[x1, y1] = 2, 2  # mark start and end points
+    mat[x, y] = 1  # mark the line pixels
 
     return mat if not inplace else None
 

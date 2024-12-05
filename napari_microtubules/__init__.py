@@ -22,10 +22,10 @@ def showTutorial(viewer):
     msg.setText("How to use Napari Microtubule Segmentation Plugin:")
     msg.setInformativeText(
         "Step 1: Load your data. This should be in TIFF format.\n\n"
-        "Step 2: Move the slider to start on frame 0. Then add a new Shape layer and draw a line over the microtubule "
+        "Step 2: Move the slider to start on desired frame. Then add a new Shape layer and draw a line over the microtubule "
         "you would like to segment.\n\n"
         "Step 3: Ensure that the line and video layer are currently selected in the 'run segmentation' tab. "
-        "Adjust the frame start and frame end numbers to match the length of the video.\n\n"
+        "Adjust the frame start and frame end numbers to match the desired length. The start frame should match the frame with the line.\n\n"
         "Step 4: Run the segmentation\n\n"
         "Step 5: If the tracking gets off, scroll to the frame you want to adjust. Then add a new shape layer "
         "and redraw a line that overlaps the microtubule. Make sure this new shape layer is selected in the "
@@ -50,7 +50,7 @@ def prepareVideoData(image_layer):
 
 def processFrame(image, line_coordinates, structuring_element_size, threshold_ratio):
     """ process a single frame using the user-chosen line """
-    result = handleImage.detectLine(image, line_coordinates, structuring_element_size, threshold_ratio)
+    result = handleImage.track_microtubule(image, line_coordinates, structuring_element_size, threshold_ratio)
     if result is None:
         showNotification('cannot detect microtubule at this frame', NotificationSeverity.WARNING)
         return None
@@ -163,8 +163,7 @@ def reselectMicrotubule(
         
         if process_result:
             endpoints, threshold_image, segment_length = process_result
-            line_coordinates = [[frame_index, endpoints[0][0], endpoints[0][1]], 
-                                [frame_index, endpoints[1][0], endpoints[1][1]]]
+            line_coordinates = [[frame_index, endpoints[0][0], endpoints[0][1]], [frame_index, endpoints[1][0], endpoints[1][1]]]
 
             # Update video data with processed image
             scaled_image = np.clip(threshold_image.astype(np.uint32) * 257, 0, 65535).astype(np.uint16)
