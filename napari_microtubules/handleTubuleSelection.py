@@ -58,7 +58,8 @@ def calculate_line_loss(x1, x2, y1, y2, pixel1, pixel2, p1, p2, angle, calculate
     )
     
     # Length loss: how length of the detected line compares to the expected length
-    length_loss = length / np.hypot(x1 - x2, y1 - y2)
+    line_length = max(np.hypot(x1 - x2, y1 - y2), 1e-6)
+    length_loss = length / line_length
     
     # Rotation loss: how much the angle differs from the expected angle
     rotation_loss = w2 * abs(angle - calculated_angle)
@@ -66,7 +67,7 @@ def calculate_line_loss(x1, x2, y1, y2, pixel1, pixel2, p1, p2, angle, calculate
     return distance_loss + length_loss + rotation_loss
 
 
-def select_best_line(image, pix1, pix2):
+def select_best_line(image, pix1, pix2, threshold):
     """Choose the best line from detected lines using loss calculation."""
     pix1, pix2 = np.array(pix1), np.array(pix2)
     length = np.linalg.norm(pix2 - pix1)
@@ -89,7 +90,7 @@ def select_best_line(image, pix1, pix2):
     calculated_angle = calculate_angle_between_points(pix1, pix2)
 
     # Detect lines using Hough Transform
-    lines = cv.HoughLinesP(binary_image, 1, np.pi / 180, threshold=50, maxLineGap=max_gap)
+    lines = cv.HoughLinesP(binary_image, 1, np.pi / 180, threshold, maxLineGap=max_gap)
     if lines is None:
         return None
 
@@ -137,7 +138,10 @@ def draw_line(mat, x0, y0, x1, y1, inplace=False):
 
     # Draw line with vectorization
     x = np.arange(x0, x1)
-    y = np.round(((y1 - y0) / (x1 - x0)) * (x - x0) + y0).astype(int)
+    if x1 == x0:
+        y = np.full_like(x, y0, dtype=int)
+    else:
+        y = np.round(((y1 - y0) / (x1 - x0)) * (x - x0) + y0).astype(int)
     mat[x0, y0], mat[x1, y1] = 2, 2  # Mark start and end points
     mat[x, y] = 1  # Mark the line pixels
 

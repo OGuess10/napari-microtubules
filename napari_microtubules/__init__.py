@@ -85,7 +85,7 @@ def processMicrotubuleData(
         image_layer: 'napari.layers.Image',
         video_start=0,
         video_end=71,
-        #structure=7,
+        structure=7,
         threshold=0.5,
         hough_threshold=35,
         viewer: napari.Viewer = None
@@ -111,7 +111,7 @@ def processMicrotubuleData(
         if frame_index in frame_to_line_coordinates:
             line_coordinates = frame_to_line_coordinates[frame_index]
 
-        process_result = processFrame(image_frame, line_coordinates, 7, threshold, hough_threshold)
+        process_result = processFrame(image_frame, line_coordinates, structure, threshold, hough_threshold)
         
         if process_result:
             endpoints, threshold_image, segment_length = process_result
