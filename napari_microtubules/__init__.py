@@ -191,6 +191,31 @@ def reselectMicrotubule(
     metadata = {"name": "segmented microtubule", "colormap": "red", "blending": "additive"}
     return [(video_data, metadata, "image")]
 
+@magicgui(call_button="merge segmentations")
+def mergeSegmentations(
+    segmentation_1: 'napari.layers.Image',
+    segmentation_2: 'napari.layers.Image',
+    image_layer: 'napari.layers.Image',
+    video_start=0,
+    video_end=71,
+    viewer: napari.Viewer = None
+) -> typing.List[napari.types.LayerDataTuple]:
+    
+    video_data = prepareVideoData(image_layer)
+ 
+    layer_data_1 = np.array(segmentation_1.data)
+    layer_data_2 = np.array(segmentation_2.data)
+    new_layer_data = np.zeros_like(layer_data_1)
+
+    for frame_index in range(video_start, min(video_end, len(video_data))):
+        new_layer_data[frame_index] = layer_data_1[frame_index] + layer_data_2[frame_index]
+
+
+
+    displaySegmentationResults(viewer, new_layer_data, new_segments)
+    metadata = {"name": "segmented microtubule", "colormap": "red", "blending": "additive"}
+    return [(video_data, metadata, "image")]
+
 
 @magicgui(call_button="save")
 def saveProcessedImageLocally(image_layer: "napari.layers.Image"):
@@ -202,4 +227,5 @@ def run():
     showTutorial(viewer)
     viewer.window.add_dock_widget(processMicrotubuleData)
     viewer.window.add_dock_widget(reselectMicrotubule)
+    viewer.window.add_dock_widget(mergeSegmentations)
     viewer.window.add_dock_widget(saveProcessedImageLocally)
