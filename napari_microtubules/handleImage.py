@@ -26,7 +26,7 @@ def crop_image(image, x1, x2, y1, y2):
     return mask * image
 
 
-def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, hough_threshold):
+def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold):
     """Track target microtubule based on user-defined line input."""
     point_start = [round(user_line[0][1]), round(user_line[0][2])]
     point_end = [round(user_line[1][1]), round(user_line[1][2])]
@@ -41,7 +41,7 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, h
     col_max = min(max(point_start[1], point_end[1]) + 5, image.shape[1])
 
     roi = processed_image[row_min:row_max, col_min:col_max]
-    total_intensity = np.float64(0)
+    total_intensity = 0
     valid_pixel_count = 0
 
     for row in range(roi.shape[0]):
@@ -110,7 +110,7 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, h
     final_binary = normal_closing(final_binary, 2)
 
     # get best line
-    line_info = select_best_line(final_binary, point_start, point_end, hough_threshold)
+    line_info = select_best_line(final_binary, point_start, point_end)
     if line_info is None:
         return
 
@@ -134,8 +134,5 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, h
                 distance_to_center = np.linalg.norm(point - line_center)
                 if distance_to_line > 5 or distance_to_center > (6 / 11) * line_length:
                     refined_binary[row, col] = 0
-
-    refined_binary = normal_closing(refined_binary, 5)
-    refined_binary = normal_opening(refined_binary, 3)
 
     return [refined_start, refined_end], refined_binary.astype(np.uint8), line_length
