@@ -86,7 +86,7 @@ def processMicrotubuleData(
         video_start=0,
         video_end=71,
         structure=7,
-        threshold=1.0,
+        threshold=0.5,
         viewer: napari.Viewer = None
 ) -> typing.List[napari.types.LayerDataTuple]:
     
@@ -131,7 +131,7 @@ def reselectMicrotubule(
     replace_frames_start=0,
     replace_frames_end=71,
     structure=7,
-    threshold=1.0,
+    threshold=0.5,
     viewer: napari.Viewer = None
 ) -> typing.List[napari.types.LayerDataTuple]:
     
