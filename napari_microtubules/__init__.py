@@ -48,9 +48,9 @@ def prepareVideoData(image_layer):
     return np.array(image_layer.data, dtype=np.uint16)
 
 
-def processFrame(image, line_coordinates, structuring_element_size, threshold_ratio):
+def processFrame(image, line_coordinates, structuring_element_size, threshold_ratio, hough_threshold):
     """ process a single frame using the user-chosen line """
-    result = handleImage.track_microtubule(image, line_coordinates, structuring_element_size, threshold_ratio)
+    result = handleImage.track_microtubule(image, line_coordinates, structuring_element_size, threshold_ratio, hough_threshold)
     if result is None:
         showNotification('cannot detect microtubule at this frame', NotificationSeverity.WARNING)
         return None
@@ -87,6 +87,7 @@ def processMicrotubuleData(
         video_end=71,
         structure=7,
         threshold=0.5,
+        hough_threshold=35,
         viewer: napari.Viewer = None
 ) -> typing.List[napari.types.LayerDataTuple]:
     
@@ -110,7 +111,7 @@ def processMicrotubuleData(
         if frame_index in frame_to_line_coordinates:
             line_coordinates = frame_to_line_coordinates[frame_index]
 
-        process_result = processFrame(image_frame, line_coordinates, structure, threshold)
+        process_result = processFrame(image_frame, line_coordinates, structure, threshold, hough_threshold)
         
         if process_result:
             endpoints, threshold_image, segment_length = process_result
@@ -132,6 +133,7 @@ def reselectMicrotubule(
     replace_frames_end=71,
     structure=7,
     threshold=0.5,
+    hough_threshold=35,
     viewer: napari.Viewer = None
 ) -> typing.List[napari.types.LayerDataTuple]:
     
@@ -159,7 +161,7 @@ def reselectMicrotubule(
             line_coordinates = frame_to_line_coordinates[frame_index]
 
         # Process the frame with the new line coordinates
-        process_result = processFrame(image_frame, line_coordinates, structure, threshold)
+        process_result = processFrame(image_frame, line_coordinates, structure, threshold, hough_threshold)
         
         if process_result:
             endpoints, threshold_image, segment_length = process_result

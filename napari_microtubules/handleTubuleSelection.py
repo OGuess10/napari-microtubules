@@ -171,7 +171,7 @@ def calculate_line_loss(x1, x2, y1, y2, pixel1, pixel2, p1, p2, angle, calculate
     return distance_loss + length_loss + rotation_loss
 
 
-def select_best_line(image, pix1, pix2):
+def select_best_line(image, pix1, pix2, threshold):
     """Choose the best line from detected lines using loss calculation."""
     pix1, pix2 = np.array(pix1), np.array(pix2)
     length = np.linalg.norm(pix2 - pix1)
@@ -181,10 +181,10 @@ def select_best_line(image, pix1, pix2):
     _, binary_image = cv.threshold(image, otsu_threshold_value, 255, cv.THRESH_BINARY)
 
     # Set gap for the Hough Transform
-    max_gap = 20  
+    max_gap = 10
 
     # Set weight factors for distance and rotation losses
-    w1, w2 = 0.005, 15  
+    w1, w2 = 0.005, 15
 
     # Prep images for visualization
     all_lines_image = np.zeros_like(binary_image)
@@ -194,7 +194,7 @@ def select_best_line(image, pix1, pix2):
     calculated_angle = calculate_angle_between_points(pix1, pix2)
 
     # Detect lines using Hough Transform
-    lines = cv.HoughLinesP(binary_image, 1, np.pi / 180, threshold=50, maxLineGap=max_gap)
+    lines = cv.HoughLinesP(binary_image, 1, np.pi / 180, threshold, maxLineGap=max_gap)
     if lines is None:
         return None
 

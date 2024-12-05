@@ -26,7 +26,7 @@ def crop_image(image, x1, x2, y1, y2):
     return mask * image
 
 
-def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold):
+def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, hough_threshold):
     """Track target microtubule based on user-defined line input."""
     point_start = [round(user_line[0][1]), round(user_line[0][2])]
     point_end = [round(user_line[1][1]), round(user_line[1][2])]
@@ -110,7 +110,7 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold):
     final_binary = normal_closing(final_binary, 2)
 
     # get best line
-    line_info = select_best_line(final_binary, point_start, point_end)
+    line_info = select_best_line(final_binary, point_start, point_end, hough_threshold)
     if line_info is None:
         return
 
