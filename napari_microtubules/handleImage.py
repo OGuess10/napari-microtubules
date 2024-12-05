@@ -26,109 +26,113 @@ def crop_image(image, x1, x2, y1, y2):
     return mask * image
 
 
-def detectLine(img, line, k, threshold):
-    """ track target microtubule based on user line input """
-    pix1 = [round(line[0][1]), round(line[0][2])]
-    pix2 = [round(line[1][1]), round(line[1][2])]
+def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold):
+    """Track target microtubule based on user-defined line input."""
+    point_start = [round(user_line[0][1]), round(user_line[0][2])]
+    point_end = [round(user_line[1][1]), round(user_line[1][2])]
 
-    # 1. blur and adjust global contrast
-    img2, img = denoise_image(img)
+    # denoise
+    contrast_image, processed_image = denoise_image(image)
 
-    # 2. find threshold value to get binary image
-    temp11 = max(min(pix1[0], pix2[0]) - 5, 0)
-    temp12 = min(max(pix1[0], pix2[0]) + 5, img.shape[0])
-    temp21 = max(min(pix1[1], pix2[1]) - 5, 0)
-    temp22 = min(max(pix1[1], pix2[1]) + 5, img.shape[1])
-    total = 0
-    count_nonzero = 0
-    thresholdmatrix = img[temp11:temp12, temp21:temp22]
-    for i in range(thresholdmatrix.shape[0]):
-        for j in range(thresholdmatrix.shape[1]):
-            if thresholdmatrix[i, j] > 150:
-                count_nonzero += 1
-                total += thresholdmatrix[i, j]
-    thres = total / count_nonzero * threshold
-    
-    # 2a. do thresholding
-    bin_img = do_adaptive_thresholding(img)
-    img2 = do_binary_thresholding(img2, thres - 5)
-    img2 = img2.astype(np.uint8)
-    img2 = normal_opening(img2, 2)
+    # get region of interest and do intensity thresholding
+    row_min = max(min(point_start[0], point_end[0]) - 5, 0)
+    row_max = min(max(point_start[0], point_end[0]) + 5, image.shape[0])
+    col_min = max(min(point_start[1], point_end[1]) - 5, 0)
+    col_max = min(max(point_start[1], point_end[1]) + 5, image.shape[1])
 
-    bin_img = bin_img * (img2 / 255)
+    roi = processed_image[row_min:row_max, col_min:col_max]
+    total_intensity = 0
+    valid_pixel_count = 0
 
-    bin_img = crop_image(bin_img, max(temp11 - 100, 0), min(temp12 + 100, bin_img.shape[0]),
-                       max(temp21 - 100, 0), min(temp22 + 100, bin_img.shape[1]))
+    for row in range(roi.shape[0]):
+        for col in range(roi.shape[1]):
+            if roi[row, col] > 150:
+                valid_pixel_count += 1
+                total_intensity += roi[row, col]
 
-    bin_img = normal_opening(bin_img, 2)
-    bin_img = bin_img.astype(np.uint8)
+    adaptive_threshold = (total_intensity / valid_pixel_count) * intensity_threshold
 
+    # 2a. apply thresholding
+    binary_image = do_adaptive_thresholding(processed_image)
+    thresholded_image = do_binary_thresholding(contrast_image, adaptive_threshold - 5)
+    thresholded_image = thresholded_image.astype(np.uint8)
+    thresholded_image = normal_opening(thresholded_image, 2)
 
-    _, label = cv.connectedComponents(bin_img)
+    combined_binary = binary_image * (thresholded_image / 255)
+    cropped_binary = crop_image(combined_binary,
+                                max(row_min - 100, 0), min(row_max + 100, combined_binary.shape[0]),
+                                max(col_min - 100, 0), min(col_max + 100, combined_binary.shape[1]))
 
-    counts_all = np.bincount(np.ndarray.flatten(label))
-    counts_all[0] = 0
+    final_binary = normal_opening(cropped_binary, 2).astype(np.uint8)
 
-    counts = np.bincount(np.ndarray.flatten(label[temp11: temp12, temp21:temp22]))
-    counts[0] = 0
+    # 3. find connected components
+    _, component_labels = cv.connectedComponents(final_binary)
 
-    # 4. find all connected components in incline rectangle area formed by input
-    targets = set()
-    for i in range(max(temp11 + 3, 0), min(temp12 - 3, bin_img.shape[0])):
-        for j in range(max(temp21 + 3, 0), min(temp22 - 3, bin_img.shape[1])):
-            if bin_img[i, j] != 0:
-                p3 = np.array([i, j])
-                d = abs(np.cross(np.array(pix2) - np.array(pix1), p3 - np.array(pix1)) / np.linalg.norm(
-                    np.array(pix2) - np.array(pix1)))
-                if d < 5:
-                    targets.add(label[i, j])
-    
-    targets = list(targets)
-    if len(targets) == 0:
-        targets = set()
-        for i in range(max(temp11 - 5, 0), min(temp12 + 5, bin_img.shape[0])):
-            for j in range(max(temp21 - 5, 0), min(temp22 + 5, bin_img.shape[1])):
-                if bin_img[i, j] != 0:
-                    p3 = np.array([i, j])
-                    d = abs(np.cross(np.array(pix2) - np.array(pix1), p3 - np.array(pix1)) / np.linalg.norm(
-                        np.array(pix2) - np.array(pix1)))
-                    if d < 15:
-                        targets.add(label[i, j])
-    
-    targets = list(targets)
-    label = np.isin(label, targets).astype(np.uint8)
-    
-    # 4a. extract all pixels of target labels
-    bin_img = bin_img * label
+    # remove background label
+    label_counts = np.bincount(component_labels.flatten())
+    label_counts[0] = 0
 
-    # 4c. smoothing
-    bin_img = normal_closing(bin_img, 2)
+    roi_labels = np.bincount(component_labels[row_min:row_max, col_min:col_max].flatten())
+    roi_labels[0] = 0
 
-    # 5. get all lines
-    ret = select_best_line(bin_img, pix1, pix2)
-    if ret is None:
+    # 4. find components close to user-line
+    selected_labels = set()
+    for row in range(max(row_min + 3, 0), min(row_max - 3, final_binary.shape[0])):
+        for col in range(max(col_min + 3, 0), min(col_max - 3, final_binary.shape[1])):
+            if final_binary[row, col] != 0:
+                point = np.array([row, col])
+                distance_to_line = abs(
+                    np.cross(np.array(point_end) - np.array(point_start), point - np.array(point_start))
+                    / np.linalg.norm(np.array(point_end) - np.array(point_start))
+                )
+                if distance_to_line < 5:
+                    selected_labels.add(component_labels[row, col])
+
+    # if no targets found, extend search region
+    if not selected_labels:
+        for row in range(max(row_min - 5, 0), min(row_max + 5, final_binary.shape[0])):
+            for col in range(max(col_min - 5, 0), min(col_max + 5, final_binary.shape[1])):
+                if final_binary[row, col] != 0:
+                    point = np.array([row, col])
+                    distance_to_line = abs(
+                        np.cross(np.array(point_end) - np.array(point_start), point - np.array(point_start))
+                        / np.linalg.norm(np.array(point_end) - np.array(point_start))
+                    )
+                    if distance_to_line < 15:
+                        selected_labels.add(component_labels[row, col])
+
+    # filter binary image for selected labels
+    selected_labels = list(selected_labels)
+    filtered_labels = np.isin(component_labels, selected_labels).astype(np.uint8)
+    final_binary = final_binary * filtered_labels
+
+    # smooth
+    final_binary = normal_closing(final_binary, 2)
+
+    # get best line
+    line_info = select_best_line(final_binary, point_start, point_end)
+    if line_info is None:
         return
-    [[y1, x1, y2, x2]], derivative, hglines, hgline = ret
-    bin_img = opening(bin_img, k, derivative)
 
-    p1 = np.array([x1, y1])
-    p2 = np.array([x2, y2])
-    
-    # center
-    pix3 = (np.array(p1) + np.array(p2)) // 2
+    [[y1, x1, y2, x2]], line_derivative, hough_lines, hough_line = line_info
+    refined_binary = opening(final_binary, smoothing_kernel, line_derivative)
 
-    # 5a. statistical analysis
-    l = np.linalg.norm(p2 - p1)
+    refined_start = np.array([x1, y1])
+    refined_end = np.array([x2, y2])
 
-    # 6. delete remote points to line
-    for i in range(max(temp11 - 105, 0), min(temp12 + 105, bin_img.shape[0])):
-        for j in range(max(temp21 - 105, 0), min(temp22 + 105, bin_img.shape[1])):
-            if bin_img[i, j] != 0:
-                p3 = np.array([i, j])
-                d = abs(np.cross(p2 - p1, p3 - p1) / np.linalg.norm(p2 - p1))
-                d2 = np.linalg.norm(p3 - pix3)
-                if d > 5 or d2 > 6 / 11 * l:
-                    bin_img[i, j] = 0
-    bin_img = bin_img.astype(np.uint8)
-    end_points = [p1, p2]
-    return end_points, bin_img, l
+    # calculate center and line length
+    line_center = (refined_start + refined_end) // 2
+    line_length = np.linalg.norm(refined_end - refined_start)
+
+    # remove outlier for more cleaning
+    for row in range(max(row_min - 105, 0), min(row_max + 105, refined_binary.shape[0])):
+        for col in range(max(col_min - 105, 0), min(col_max + 105, refined_binary.shape[1])):
+            if refined_binary[row, col] != 0:
+                point = np.array([row, col])
+                distance_to_line = abs(np.cross(refined_end - refined_start, point - refined_start)
+                                       / np.linalg.norm(refined_end - refined_start))
+                distance_to_center = np.linalg.norm(point - line_center)
+                if distance_to_line > 5 or distance_to_center > (6 / 11) * line_length:
+                    refined_binary[row, col] = 0
+
+    return [refined_start, refined_end], refined_binary.astype(np.uint8), line_length

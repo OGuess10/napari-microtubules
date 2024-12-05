@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+from scipy.ndimage import gaussian_filter
 
 
 def do_binary_thresholding(image, threshold_value):
@@ -13,9 +14,14 @@ def do_adaptive_thresholding(image):
     return cv.adaptiveThreshold(image, image.max(), cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
 
 
+def gaussian_blur(image, sigma=2):
+    """ do Gaussian blur on input image """
+    return gaussian_filter(image, sigma=sigma)
+
+
 def denoise_image(image):
     """ denoise input image and boost constrast """
-    blurred_image = cv.medianBlur(image.astype(np.uint8), 5)
+    blurred_image = gaussian_blur(image.astype(np.uint8), 5)
     contrast_enhancer = cv.createCLAHE(clipLimit=None, tileGridSize=(8, 8))
     enhanced_image = contrast_enhancer.apply(blurred_image)
 

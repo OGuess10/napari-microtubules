@@ -23,7 +23,7 @@ def prepareVideoData(image_layer):
 
 def processFrame(image, line_coordinates, structuring_element_size, threshold_ratio):
     """ process a single frame using the user-chosen line """
-    result = handleImage.detectLine(image, line_coordinates, structuring_element_size, threshold_ratio)
+    result = handleImage.track_microtubule(image, line_coordinates, structuring_element_size, threshold_ratio)
     if result is None:
         showNotification('cannot detect microtubule at this frame', NotificationSeverity.WARNING)
         return None
