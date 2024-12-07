@@ -210,9 +210,9 @@ def mergeSegmentations(
     for frame_index in range(video_start, min(video_end, len(video_data))):
         new_layer_data[frame_index] = layer_data_1[frame_index] + layer_data_2[frame_index]
 
+    global segment_lengths_global
 
-
-    displaySegmentationResults(viewer, new_layer_data, new_segments)
+    displaySegmentationResults(viewer, new_layer_data, segment_lengths_global)
     metadata = {"name": "segmented microtubule", "colormap": "red", "blending": "additive"}
     return [(video_data, metadata, "image")]
 
