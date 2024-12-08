@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import napari
 from napari._qt.dialogs.qt_notification import NapariQtNotification
+from napari_microtubules.handleTubuleSelection import *
 from napari.utils.notifications import Notification, NotificationSeverity
 import typing
 
