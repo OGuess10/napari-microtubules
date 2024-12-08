@@ -1,5 +1,4 @@
 import numpy as np
-from napari_microtubules.morphOperations import *
 from napari_microtubules.handleTubuleSelection import *
 
 
@@ -19,20 +18,6 @@ class LoadTIFF:
         self.tiff_gray_image = video // 257
 
 
-def crop_image(image, x1, x2, y1, y2):
-    """ crop image based on input size """
-    mask = np.zeros(image.shape)
-    mask[x1:x2, y1:y2] = 1
-    return mask * image
-
-
-def crop_image(image, x1, x2, y1, y2):
-    """ crop image based on input size """
-    mask = np.zeros(image.shape)
-    mask[x1:x2, y1:y2] = 1
-    return mask * image
-
-
 def custom_connected_components(binary_image, connectivity=8, min_size=50):
     """ connected components function without using cv.connectedComponents """
     binary_image = (binary_image > 0).astype(np.uint8)
@@ -42,7 +27,7 @@ def custom_connected_components(binary_image, connectivity=8, min_size=50):
     labels = np.zeros_like(binary_image, dtype=np.int32)
     label = 0
 
-    # define neighbor offsets for 4- or 8-connectivity
+    # define neighbors for 4- or 8-connectivity
     if connectivity == 4:
         neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     elif connectivity == 8:
@@ -80,6 +65,13 @@ def custom_connected_components(binary_image, connectivity=8, min_size=50):
     filtered_labels = np.isin(labels, large_labels).astype(np.uint8) * 255
 
     return label, labels, filtered_labels
+
+
+def crop_image(image, x1, x2, y1, y2):
+    """ crop image based on input size """
+    mask = np.zeros(image.shape)
+    mask[x1:x2, y1:y2] = 1
+    return mask * image
 
 
 def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, connectivity=8):
