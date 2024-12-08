@@ -77,7 +77,7 @@ def select_best_line(image, pix1, pix2, threshold):
     _, binary_image = cv.threshold(image, otsu_threshold_value, 255, cv.THRESH_BINARY)
 
     # Set gap for the Hough Transform
-    max_gap = 20  
+    max_gap = 10 
 
     # Set weight factors for distance and rotation losses
     w1, w2 = 0.005, 15  

@@ -135,4 +135,7 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, h
                 if distance_to_line > 5 or distance_to_center > (6 / 11) * line_length:
                     refined_binary[row, col] = 0
 
+    refined_binary = normal_closing(refined_binary, 8)
+    refined_binary = normal_opening(refined_binary, 2)
+
     return [refined_start, refined_end], refined_binary.astype(np.uint8), line_length
