@@ -33,29 +33,57 @@ def crop_image(image, x1, x2, y1, y2):
     return mask * image
 
 
-def custom_connected_components(binary_image, connectivity=8):
-    """ find connected components with custom settings for noise handling """
-    binary_image = (binary_image > 0).astype(np.uint8) * 255
-    
-    num_labels, labels = cv.connectedComponents(binary_image, connectivity=connectivity)
+def custom_connected_components(binary_image, connectivity=8, min_size=50):
+    """ connected components function without using cv.connectedComponents """
+    binary_image = (binary_image > 0).astype(np.uint8)
+    height, width = binary_image.shape
 
-    # Label counts - Remove the background label
-    label_counts = np.bincount(labels.flatten())
-    label_counts[0] = 0  # background label
+    # output labels matrix initialized to 0
+    labels = np.zeros_like(binary_image, dtype=np.int32)
+    label = 0
 
-    # You can apply custom filtering based on label sizes, shape, etc.
-    # For example, remove small components that are likely noise:
-    min_size = 50  # Minimum size of connected components
-    large_components = np.where(label_counts >= min_size)[0]
+    # define neighbor offsets for 4- or 8-connectivity
+    if connectivity == 4:
+        neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    elif connectivity == 8:
+        neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+    else:
+        raise ValueError("connectivity must be either 4 or 8.")
 
-    # Create a mask for the large components
-    filtered_labels = np.isin(labels, large_components).astype(np.uint8) * 255
+    # do flood-fill
+    def flood_fill(x, y, current_label):
+        stack = [(x, y)]
+        component_size = 0
+        while stack:
+            cx, cy = stack.pop()
+            if labels[cx, cy] == 0 and binary_image[cx, cy] == 1:
+                labels[cx, cy] = current_label
+                component_size += 1
+                for dx, dy in neighbors:
+                    nx, ny = cx + dx, cy + dy
+                    if 0 <= nx < height and 0 <= ny < width and labels[nx, ny] == 0:
+                        stack.append((nx, ny))
+        return component_size
 
-    return num_labels, labels, filtered_labels
+    # iterate through all pixels to find connected components
+    label_sizes = []
+    for i in range(height):
+        for j in range(width):
+            if binary_image[i, j] == 1 and labels[i, j] == 0:
+                label += 1
+                size = flood_fill(i, j, label)
+                label_sizes.append(size)
+
+    # filter components by size
+    label_sizes = np.array(label_sizes)
+    large_labels = np.where(label_sizes >= min_size)[0] + 1
+    filtered_labels = np.isin(labels, large_labels).astype(np.uint8) * 255
+
+    return label, labels, filtered_labels
 
 
 def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, connectivity=8):
-    """Track and find connected components of microtubules based on user-defined line input."""
+    """ track connected components of microtubules based on user-defined line input """
     point_start = [round(user_line[0][1]), round(user_line[0][2])]
     point_end = [round(user_line[1][1]), round(user_line[1][2])]
 
