@@ -32,10 +32,8 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
         - for windows: `.\venv\Scripts\activate`
     - install dependencies manually, or run `pip install -r dependencies.txt`
 
-## to run as python program:
-- run main.py: `python3 main.py`
 
-## to run as napari plugin:
+## to run the napari plugin:
 - run napari
 - select Microtubules Segmentation from the Plugins menu
 - click Run on the right-hand side
