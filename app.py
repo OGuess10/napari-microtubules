@@ -1,18 +1,15 @@
 from magicgui import magicgui
 import matplotlib.pyplot as plt
-from qtpy.QtWidgets import QFileDialog
-import datetime
-import pathlib
-import napari
-from napari import Viewer
 import numpy as np
-from PIL import Image as PILImage
+import typing
+from qtpy.QtWidgets import QMessageBox
+
+import napari
 from napari._qt.dialogs.qt_notification import NapariQtNotification
 from napari.utils.notifications import Notification, NotificationSeverity
-import typing
 import napari_microtubules.handleImage as handleImage
 from napari_microtubules.handleImage import LoadTIFF
-from qtpy.QtWidgets import QMessageBox
+
 
 segment_lengths_global = []
 
@@ -188,6 +185,7 @@ def reselectMicrotubule(
     displaySegmentationResults(viewer, layer_data, new_segment_lengths)
     metadata = {"name": "segmented microtubule", "colormap": "red", "blending": "additive"}
     return [(video_data, metadata, "image")]
+
 
 @magicgui(call_button="merge segmentations")
 def mergeSegmentations(
