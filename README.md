@@ -36,6 +36,6 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
 - click Run on the right-hand side
 
 
-## to run as a python app
+## to run as a python app:
 - navigate to python-app
 - run main.py
