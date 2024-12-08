@@ -14,10 +14,7 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
    - users can scrub frame-by-frame after segmentation and reselect the microtubule in each frame if wrongly selected
    - after analysis, program creates a plot to display microtubule growth/shrinkage information
 - segmentation
-   - segmentation algorithm accurately segments any microtubule
-      - the selected microtubule is isolated from other microtubules, background, and noise
-   - segmentation encompasses all parts of the microtubule
-      - segmentation is robust enough to handle highly dynamic microtubules
+   - segmentation algorithm segments a user-chosen microtubule
    - manual user inputs is limited
    - algorithm effectively speeds up process of manual segmentation
 
@@ -32,10 +29,8 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
         - for windows: `.\venv\Scripts\activate`
     - install dependencies manually, or run `pip install -r dependencies.txt`
 
-## to run as python program:
-- run main.py: `python3 main.py`
 
-## to run as napari plugin:
+## to run the napari plugin:
 - run napari
 - select Microtubules Segmentation from the Plugins menu
 - click Run on the right-hand side
