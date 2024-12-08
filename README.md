@@ -34,3 +34,8 @@ the goal of this project is to track the growth and shrinkage of a microtubule o
 - run napari
 - select Microtubules Segmentation from the Plugins menu
 - click Run on the right-hand side
+
+
+## to run as a python app
+- navigate to python-app
+- run main.py
