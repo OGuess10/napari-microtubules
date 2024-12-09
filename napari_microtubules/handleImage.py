@@ -223,7 +223,7 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, p
     return [refined_start, refined_end], refined_binary.astype(np.uint8), line_length
 
 
-# MORPHOLOGICAL FUNCTIONS
+# MORPHOLOGICAL FUNCTIONS / OTHER HELPERS
 from scipy.ndimage import gaussian_filter
 
 def do_binary_thresholding(image, threshold_value):
@@ -254,52 +254,50 @@ def denoise_image(image):
 
 def shift(arr, num, fill_value=np.nan):
     """ shift elements of input array by some input positions """
-    result = np.empty_like(arr)
+    result = np.full_like(arr, fill_value)
     if num > 0:
-        result[:num] = fill_value
         result[num:] = arr[:-num]
     elif num < 0:
-        result[num:] = fill_value
         result[:num] = arr[-num:]
     else:
         result[:] = arr
     return result
 
 
-def create_kernel(k, d):
+def create_kernel(kernel_input, distance_input):
     """ make a custom kernel """
-    kernel = np.zeros((k, k), np.uint8)
-    if -1 < d < 1:
-        offset = round((k - d * k + 1) / 2)
-        for j in range(k):
-            mid = round(j * d) + offset
-            low, high = max(0, round(mid - 1)), min(k, round(mid))
+    kernel = np.zeros((kernel_input, kernel_input), np.uint8)
+    if -1 < distance_input < 1:
+        offset = round((kernel_input - distance_input * kernel_input + 1) / 2)
+        for j in range(kernel_input):
+            mid = round(j * distance_input) + offset
+            low, high = max(0, round(mid - 1)), min(kernel_input, round(mid))
             for i in range(low, high):
                 kernel[i, j] = 1
     else:
-        d = 1 / d
-        offset = round((k - d * k + 1) / 2)
-        for i in range(k):
-            mid = round(i * d) + offset
-            low, high = max(0, round(mid - 1)), min(k, round(mid))
+        distance_input = 1 / distance_input
+        offset = round((kernel_input - distance_input * kernel_input + 1) / 2)
+        for i in range(kernel_input):
+            mid = round(i * distance_input) + offset
+            low, high = max(0, round(mid - 1)), min(kernel_input, round(mid))
             for j in range(low, high):
                 kernel[i, j] = 1
     return kernel
 
 
-def adjust_kernel(kernel, k, d):
-    """ adjust kernel to make sure the boundary is aligned right """
-    if -1 < d < 1:
-        up, down = np.argmax(kernel[:, 0] == 1), np.argmax(kernel[::-1, -1] == 1)
-        if up - down > 1:
+def adjust_kernel(kernel, kernel_size, distance_from_center):
+    """ Adjust kernel to make sure the boundary is aligned correctly. """
+    if -1 < distance_from_center < 1:
+        top_boundary, bottom_boundary = np.argmax(kernel[:, 0] == 1), np.argmax(kernel[::-1, -1] == 1)
+        if top_boundary - bottom_boundary > 1:
             kernel[:, :] = np.roll(kernel, -1, axis=0)
-        elif down - up > 1:
+        elif bottom_boundary - top_boundary > 1:
             kernel[:, :] = np.roll(kernel, 1, axis=0)
     else:
-        front, back = np.argmax(kernel[-1] == 1), np.argmax(kernel[0] == 1)
-        if front - back > 1:
+        left_boundary, right_boundary = np.argmax(kernel[-1] == 1), np.argmax(kernel[0] == 1)
+        if left_boundary - right_boundary > 1:
             kernel[:] = np.roll(kernel, -1, axis=1)
-        elif back - front > 1:
+        elif right_boundary - left_boundary > 1:
             kernel[:] = np.roll(kernel, 1, axis=1)
     return kernel
 
