@@ -27,7 +27,7 @@ def custom_connected_components(binary_image, connectivity=8, min_size=50):
     labels = np.zeros_like(binary_image, dtype=np.int32)
     label = 0
 
-    # define neighbors for 4- or 8-connectivity
+    # define neighbor for 4- or 8-connectivity
     if connectivity == 4:
         neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     elif connectivity == 8:
@@ -74,7 +74,7 @@ def crop_image(image, x1, x2, y1, y2):
     return mask * image
 
 
-def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, connectivity=8):
+def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, padding=5, connectivity=8):
     """ track connected components of microtubules based on user-defined line input """
     point_start = [round(user_line[0][1]), round(user_line[0][2])]
     point_end = [round(user_line[1][1]), round(user_line[1][2])]
@@ -83,16 +83,16 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, c
     contrast_image, processed_image = denoise_image(image)
 
     # Get region of interest (ROI) and perform intensity thresholding
-    row_min = max(min(point_start[0], point_end[0]) - 5, 0)
-    row_max = min(max(point_start[0], point_end[0]) + 5, image.shape[0])
-    col_min = max(min(point_start[1], point_end[1]) - 5, 0)
-    col_max = min(max(point_start[1], point_end[1]) + 5, image.shape[1])
+    row_min = max(min(point_start[0], point_end[0]) - padding, 0)
+    row_max = min(max(point_start[0], point_end[0]) + padding, image.shape[0])
+    col_min = max(min(point_start[1], point_end[1]) - padding, 0)
+    col_max = min(max(point_start[1], point_end[1]) + padding, image.shape[1])
 
     roi = processed_image[row_min:row_max, col_min:col_max]
     total_intensity = np.float64(0)
     valid_pixel_count = np.float64(0)
 
-    # Calculate adaptive threshold based on ROI intensity
+    # Calculate based on ROI intensity
     for row in range(roi.shape[0]):
         for col in range(roi.shape[1]):
             if roi[row, col] > 150:
@@ -101,10 +101,9 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, c
 
     adaptive_threshold = (total_intensity / valid_pixel_count) * intensity_threshold
 
-    # Perform binary thresholding
+    # Do binary thresholding
     binary_image = do_adaptive_thresholding(processed_image)
-    thresholded_image = do_binary_thresholding(contrast_image, adaptive_threshold - 5)
-    thresholded_image = thresholded_image.astype(np.uint8)
+    thresholded_image = do_binary_thresholding(contrast_image, adaptive_threshold - 5).astype(np.uint8)
     thresholded_image = normal_opening(thresholded_image, 2)
 
     # Combine thresholded images
@@ -114,6 +113,7 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, c
                                 max(col_min - 100, 0), min(col_max + 100, combined_binary.shape[1]))
 
     final_binary = normal_opening(cropped_binary, 2).astype(np.uint8)
+    # final_binary = otsu_threshold(cropped_binary).astype(np.uint8)
 
     # plt.figure(figsize=(10, 5))
     # plt.subplot(1, 2, 1)
@@ -124,38 +124,56 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, c
     # Find connected components
     num_labels, labels, filtered_labels = custom_connected_components(final_binary, connectivity)
 
-    # Get regions close to the user-defined line
-    selected_labels = set()
-    for row in range(max(row_min + 3, 0), min(row_max - 3, final_binary.shape[0])):
-        for col in range(max(col_min + 3, 0), min(col_max - 3, final_binary.shape[1])):
-            if final_binary[row, col] != 0:
-                point = np.array([row, col])
-                distance_to_line = abs(
-                    np.cross(np.array(point_end) - np.array(point_start), point - np.array(point_start))
-                    / np.linalg.norm(np.array(point_end) - np.array(point_start))
-                )
-                if distance_to_line < 5:
-                    selected_labels.add(labels[row, col])
+    # get regions close to the line
+    def calculate_distance_to_line(point, point_start, point_end):
+        """ calculate perpendicular distance from a point to a line """
+        # convert points to numpy arrays
+        line_vector = np.array(point_end) - np.array(point_start)
+        point_vector = np.array(point) - np.array(point_start)
 
-    # If no components are found near the line, extend the search region
+        # compute the norm
+        distance = abs(np.cross(line_vector, point_vector) / np.linalg.norm(line_vector))
+        return distance
+
+    # helper function to find labels within a specific distance to the line
+    def find_labels_near_line(row_min, row_max, col_min, col_max, distance_threshold, binary_image, labels, point_start, point_end):
+        """ find labels of components near a line within a given distance """
+        selected = set()
+        # iterate over defined region of binary image
+        for row in range(max(row_min, 0), min(row_max, binary_image.shape[0])):
+            for col in range(max(col_min, 0), min(col_max, binary_image.shape[1])):
+                # if the pixel is part of a component
+                if binary_image[row, col] != 0:
+                    point = [row, col]
+                    # calculate the distance to line
+                    distance = calculate_distance_to_line(point, point_start, point_end)
+                    if distance < distance_threshold:
+                        # add label of the component if it's near the line
+                        selected.add(labels[row, col])
+        return selected
+
+    selected_labels = find_labels_near_line(
+        row_min + 3, row_max - 3, col_min + 3, col_max - 3, 
+        distance_threshold=5, 
+        binary_image=final_binary, 
+        labels=labels, 
+        point_start=point_start, 
+        point_end=point_end
+    )
+
+    # if no labels are found near the line, extend the search region
     if not selected_labels:
-        for row in range(max(row_min - 5, 0), min(row_max + 5, final_binary.shape[0])):
-            for col in range(max(col_min - 5, 0), min(col_max + 5, final_binary.shape[1])):
-                if final_binary[row, col] != 0:
-                    point = np.array([row, col])
-                    distance_to_line = abs(
-                        np.cross(np.array(point_end) - np.array(point_start), point - np.array(point_start))
-                        / np.linalg.norm(np.array(point_end) - np.array(point_start))
-                    )
-                    if distance_to_line < 15:
-                        selected_labels.add(labels[row, col])
+        selected_labels = find_labels_near_line(
+            row_min - 5, row_max + 5, col_min - 5, col_max + 5, 
+            distance_threshold=15, 
+            binary_image=final_binary, 
+            labels=labels, 
+            point_start=point_start, 
+            point_end=point_end
+        )
 
     # Filter the binary image for selected labels
-    selected_labels = list(selected_labels)
-    filtered_labels = np.isin(labels, selected_labels).astype(np.uint8)
-    final_binary = final_binary * filtered_labels
-
-    # Smooth the final image
+    final_binary = final_binary * np.isin(labels, list(selected_labels)).astype(np.uint8)
     final_binary = normal_closing(final_binary, 2)
 
     # Select the best line from the filtered microtubule components
@@ -169,18 +187,33 @@ def track_microtubule(image, user_line, smoothing_kernel, intensity_threshold, c
     refined_start = np.array([x1, y1])
     refined_end = np.array([x2, y2])
 
-    # Calculate the center and length of the line
+    # calculate the center and length of the line
     line_center = (refined_start + refined_end) // 2
-    line_length = np.linalg.norm(refined_end - refined_start)
+    line_direction = refined_end - refined_start
+    line_length = np.linalg.norm(line_direction)
 
-    # Remove outliers based on distance from the line and center
-    for row in range(max(row_min - 105, 0), min(row_max + 105, refined_binary.shape[0])):
-        for col in range(max(col_min - 105, 0), min(col_max + 105, refined_binary.shape[1])):
+    # calculate cross product norm for the line
+    line_norm = np.linalg.norm(line_direction)
+
+    # get bounds for rows and columns
+    row_min = max(row_min - 105, 0)
+    row_max = min(row_max + 105, refined_binary.shape[0])
+    col_min = max(col_min - 105, 0)
+    col_max = min(col_max + 105, refined_binary.shape[1])
+
+    # go through through each pixel in the region
+    for row in range(row_min, row_max):
+        for col in range(col_min, col_max):
             if refined_binary[row, col] != 0:
                 point = np.array([row, col])
-                distance_to_line = abs(np.cross(refined_end - refined_start, point - refined_start)
-                                       / np.linalg.norm(refined_end - refined_start))
+
+                # calculate distance to the line using cross product
+                distance_to_line = abs(np.cross(line_direction, point - refined_start) / line_norm)
+
+                # calculate distance to the line center
                 distance_to_center = np.linalg.norm(point - line_center)
+
+                # remove outliers based on distance thresholds
                 if distance_to_line > 5 or distance_to_center > (6 / 11) * line_length:
                     refined_binary[row, col] = 0
 

@@ -1,16 +1,10 @@
 import cv2 as cv
 import numpy as np
 import math
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
-def select_best_line(image, target_pixel_start, target_pixel_end):
-    """ choose the best line from detected lines using loss """
-    target_pixel_start, target_pixel_end = np.array(target_pixel_start), np.array(target_pixel_end)
-    target_line_length = np.linalg.norm(target_pixel_end - target_pixel_start)
-
-
-    def otsu_threshold(image):
+def otsu_threshold(image):
         """ do Otsu's method manually with smoothing """
         # smooth image to reduce noise
         smoothed_image = cv.GaussianBlur(image, (5, 5), 0)
@@ -22,23 +16,23 @@ def select_best_line(image, target_pixel_start, target_pixel_end):
         total_pixels = smoothed_image.size
         
         # calculate the cumulative sum of the histogram
-        cum_sum = np.cumsum(hist)
+        cumulative_sum = np.cumsum(hist)
         
         # calculate the cumulative mean
-        cum_mean = np.cumsum(hist * np.arange(256)) / cum_sum
+        cumulative_mean = np.cumsum(hist * np.arange(256)) / cumulative_sum
         
         # initialize variables for maximum variance and optimal threshold
         max_variance = 0
         optimal_threshold = 0
         
         for threshold in range(1, 256):
-            # class 1 (below threshold)
-            weight1 = cum_sum[threshold - 1] / total_pixels
-            mean1 = cum_mean[threshold - 1]
+            # below threshold
+            weight1 = cumulative_sum[threshold - 1] / total_pixels
+            mean1 = cumulative_mean[threshold - 1]
             
-            # class 2 (above threshold)
-            weight2 = (cum_sum[-1] - cum_sum[threshold - 1]) / total_pixels
-            mean2 = (cum_mean[-1] - cum_mean[threshold - 1]) / (cum_sum[-1] - cum_sum[threshold - 1])
+            # above threshold
+            weight2 = (cumulative_sum[-1] - cumulative_sum[threshold - 1]) / total_pixels
+            mean2 = (cumulative_mean[-1] - cumulative_mean[threshold - 1]) / (cumulative_sum[-1] - cumulative_sum[threshold - 1])
             
             # calculate between-class variance
             variance_between = weight1 * weight2 * (mean1 - mean2) ** 2
@@ -51,18 +45,24 @@ def select_best_line(image, target_pixel_start, target_pixel_end):
         return optimal_threshold
 
 
+def select_best_line(image, target_pixel_start, target_pixel_end):
+    """ choose the best line from detected lines using loss """
+    target_pixel_start = np.array(target_pixel_start)
+    target_pixel_end = np.array(target_pixel_end)
+    target_line_length = np.linalg.norm(target_pixel_end - target_pixel_start)
+
     # apply Otsu's thresholding
     otsu_threshold_value = otsu_threshold(image)
     _, binary_image = cv.threshold(image, otsu_threshold_value, 255, cv.THRESH_BINARY)
 
-    # Prep images for visualization
     all_detected_lines_image = np.zeros_like(binary_image)
     best_detected_line_image = np.zeros_like(binary_image)
 
 
     def calculate_angle_between_points(start, end):
         """ calculate angle of the line formed by two points """
-        delta_x, delta_y = end[0] - start[0], end[1] - start[1]
+        delta_x = end[0] - start[0]
+        delta_y = end[1] - start[1]
         angle = math.atan2(delta_y, delta_x)
         return angle if angle >= 0 else angle + 2 * math.pi
 
@@ -76,7 +76,8 @@ def select_best_line(image, target_pixel_start, target_pixel_end):
         )
         
         # length loss: how the length of the detected line compares to the expected length
-        length_loss = line_length / np.hypot(x_start - x_end, y_start - y_end)
+        line_l = max(np.hypot(x_start - x_end, y_start - y_end), 1e-6)
+        length_loss = line_length / line_l
         
         # rotation loss: how much the angle differs from the expected angle
         rotation_loss = rotation_weight * abs(target_angle - line_angle)
@@ -92,7 +93,6 @@ def select_best_line(image, target_pixel_start, target_pixel_end):
     if detected_lines is None:
         return None
 
-    # Initialize best line selection variables
     best_line, min_loss, best_line_slope = None, float('inf'), None
 
     def draw_line(matrix, x_start, y_start, x_end, y_end, inplace=False):
